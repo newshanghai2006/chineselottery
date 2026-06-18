@@ -44,51 +44,126 @@ function readBody(req) {
 }
 
 // -------------------------- 获取最近 20 期开奖 --------------------------
-// 注意：cwl.gov.cn 接口有反爬——首次请求返回 302 并通过 Set-Cookie 下发一个
-// 反爬 Cookie(HMF_CI)，跳转地址是同一个 URL。Python 的 requests 在自动跟随
-// 重定向时会带上该 Cookie，所以第二跳就成功；而 Node 的 fetch 跟随重定向时
-// 不会携带 Set-Cookie，因此必须手动完成「拿 Cookie → 带 Cookie 重试」的流程。
-// 另外不要加 Referer/Accept 头，否则会被直接 403。
+// 数据源有两个，按顺序尝试，任一成功即返回：
+//   1) 官方 cwl.gov.cn —— 有反爬：首次请求 302 并通过 Set-Cookie 下发反爬
+//      Cookie(HMF_CI)，跳转地址是同一个 URL。Python 的 requests 自动跟随重定向
+//      时会带上该 Cookie，第二跳就成功；Node 的 fetch 跟随重定向不携带 Set-Cookie，
+//      所以必须手动「拿 Cookie → 带 Cookie 重试」。另外不要加 Referer/Accept，否则 403。
+//      但该 WAF 会按 IP 风控——云服务器/IDC、境外 IP 常被直接 403，此时走备用源。
+//   2) 备用源 500.com 历史页 —— 纯 HTML 表格，无 WAF、无 Cookie，按 IP 封锁概率低。
 async function getRecentDraws(issueCount = 20) {
+  const errors = [];
+  try {
+    return await fetchFromCwl(issueCount);
+  } catch (e) {
+    errors.push(`官方接口: ${e.message}`);
+  }
+  try {
+    const draws = await fetchFrom500(issueCount);
+    if (draws.length) return draws;
+    errors.push('备用源 500.com: 未解析到数据');
+  } catch (e) {
+    errors.push(`备用源 500.com: ${e.message}`);
+  }
+  throw new Error(errors.join('；'));
+}
+
+// 主源：官方 cwl.gov.cn（cookie 重试 + 重试 2 次）
+async function fetchFromCwl(issueCount) {
   const url = `${CWL_URL}?name=ssq&issueCount=${issueCount}&pageNo=1&pageSize=${issueCount}`;
   const baseHeaders = { 'User-Agent': 'Mozilla/5.0' };
 
-  // 第 1 步：手动捕获 302 下发的 Cookie（不自动跟随）
-  const first = await fetch(url, {
-    headers: baseHeaders,
-    redirect: 'manual',
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // 第 1 步：手动捕获 302 下发的 Cookie（不自动跟随）
+      const first = await fetch(url, {
+        headers: baseHeaders,
+        redirect: 'manual',
+        signal: AbortSignal.timeout(10000),
+      });
+
+      let resp = first;
+      // getSetCookie() 更稳（兼容多 Set-Cookie）；回退到 get()
+      const cookies =
+        (first.headers.getSetCookie && first.headers.getSetCookie()) ||
+        (first.headers.get('set-cookie') ? [first.headers.get('set-cookie')] : []);
+      if (cookies.length) {
+        const cookie = cookies.map((c) => c.split(';')[0]).join('; ');
+        // 第 2 步：带上 Cookie 重试
+        resp = await fetch(url, {
+          headers: { ...baseHeaders, Cookie: cookie },
+          redirect: 'manual',
+          signal: AbortSignal.timeout(10000),
+        });
+      }
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const items = Array.isArray(data.result) ? data.result : [];
+      return items.slice(0, issueCount).map((it) => {
+        const red = String(it.red || '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return {
+          label: `${it.code || ''}期 ${it.date || ''}`,
+          code: it.code || '',
+          date: it.date || '',
+          red: red.join(' '),
+          blue: String(it.blue || '').trim(),
+          source: '官方',
+        };
+      });
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('未知错误');
+}
+
+// 备用源：500.com 历史页（HTML 表格解析）
+async function fetchFrom500(issueCount) {
+  const url = `https://datachart.500.com/ssq/history/newinc/history.php?limit=${issueCount}&sort=0`;
+  const resp = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
     signal: AbortSignal.timeout(10000),
   });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const html = await resp.text();
 
-  let resp = first;
-  const setCookie = first.headers.get('set-cookie');
-  if (setCookie) {
-    // 只取 "key=value" 部分（去掉 Path/Expires 等属性）
-    const cookie = setCookie.split(';')[0];
-    // 第 2 步：带上 Cookie 重试
-    resp = await fetch(url, {
-      headers: { ...baseHeaders, Cookie: cookie },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(10000),
+  const draws = [];
+  // 每一行：<tr class="t_tr1">...<td>期号</td><td>红*6</td><td>蓝</td>...<td>日期</td></tr>
+  const rowRe = /<tr class="t_tr1">([\s\S]*?)<\/tr>/g;
+  let row;
+  while ((row = rowRe.exec(html)) !== null && draws.length < issueCount) {
+    const cells = [];
+    // 先去掉 HTML 注释（行首有 <!--<td>2</td>-->，会干扰列解析）
+    const rowHtml = row[1].replace(/<!--[\s\S]*?-->/g, '');
+    const tdRe = /<td[^>]*>(.*?)<\/td>/g; // 每行独立，避免共享 lastIndex
+    let td;
+    while ((td = tdRe.exec(rowHtml)) !== null) {
+      cells.push(td[1].replace(/&nbsp;/g, '').replace(/<[^>]*>/g, '').trim());
+    }
+    if (cells.length < 9) continue;
+    // 期号：500.com 用 26068 这种 5 位（YY+NNN），补全为 2026068
+    let code = cells[0];
+    if (/^\d{5}$/.test(code)) code = `20${code}`;
+    const red = cells.slice(1, 7);
+    const blue = cells[7];
+    // 日期：取该行最后一个形如 YYYY-MM-DD 的单元格
+    const date = [...cells].reverse().find((c) => /^\d{4}-\d{2}-\d{2}$/.test(c)) || '';
+    if (red.some((r) => !/^\d{1,2}$/.test(r)) || !/^\d{1,2}$/.test(blue)) continue;
+    draws.push({
+      label: `${code}期 ${date}（备用源）`,
+      code,
+      date,
+      red: red.join(' '),
+      blue,
+      source: '500.com',
     });
   }
-
-  if (!resp.ok) throw new Error(`官方接口返回 HTTP ${resp.status}`);
-  const data = await resp.json();
-  const items = Array.isArray(data.result) ? data.result : [];
-  return items.slice(0, issueCount).map((it) => {
-    const red = String(it.red || '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return {
-      label: `${it.code || ''}期 ${it.date || ''}`,
-      code: it.code || '',
-      date: it.date || '',
-      red: red.join(' '),
-      blue: String(it.blue || '').trim(),
-    };
-  });
+  return draws;
 }
 
 // -------------------------- 配置文件读/写（与 lottery.py 同格式）--------------------------
