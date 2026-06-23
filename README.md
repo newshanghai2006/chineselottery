@@ -1,6 +1,6 @@
 # 双色球核对器 · 网页版
 
-网页版的福彩双色球 5 组号码核对器，复刻自 `lottery.py`（Tkinter 桌面版）。
+网页版的福彩双色球 5 组号码核对器，复刻自 `lottery.py`（Tkinter 桌面版），更新email。
 **零第三方依赖**，仅用 Node.js 内置模块，无需 `npm install`，适合直接丢到 Linux VM 上跑。
 
 ## 环境要求
