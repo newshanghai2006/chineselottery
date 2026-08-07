@@ -1,14 +1,14 @@
 // 双色球核对器 — 网页版后端（零依赖，Node.js 18+）
 // 复刻 lottery.py 的功能：拉取官方开奖、保存自选号码、核对中奖
 //
-// 运行: node server.js   然后浏览器打开 http://<服务器IP>:8888
+// 运行: node server.js   然后浏览器打开 http://<服务器IP>:3000
 'use strict';
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 8888;
+const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const CONFIG_FILE = path.join(__dirname, 'lottery_config.txt');
@@ -204,6 +204,7 @@ const MIME = {
   '.js': 'application/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml; charset=utf-8',
 };
 
 function serveStatic(req, res) {

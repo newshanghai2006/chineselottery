@@ -11,14 +11,14 @@
 ## 运行
 
 ```bash
-cd lottery
+cd chineselottery
 node server.js
 ```
 
-启动后默认监听 `0.0.0.0:8888`：
+启动后默认监听 `0.0.0.0:3000`：
 
-- 本机访问：<http://localhost:8888>
-- 局域网/外部访问：`http://<虚拟机IP>:8888`
+- 本机访问：<http://localhost:3000>
+- 局域网/外部访问：`http://<虚拟机IP>:3000`
 
 自定义端口或监听地址：
 
@@ -53,10 +53,11 @@ nohup node server.js > lottery.log 2>&1 &
 ## 文件结构
 
 ```
-lottery/
+chineselottery/
 ├── server.js              # Node 后端（静态服务 + API 代理 + 配置读写）
 ├── lottery_config.txt     # 自选号码持久化（与 Python 版共用，格式兼容）
 ├── public/
+│   ├── favicon.svg        # 浏览器标签页图标
 │   ├── index.html
 │   ├── style.css
 │   └── app.js             # 前端逻辑（号码解析 + 中奖规则，与 lottery.py 同步）

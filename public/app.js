@@ -50,18 +50,33 @@ for (let i = 0; i < 5; i++) {
 
   const red = document.createElement('input');
   red.type = 'text';
-  red.placeholder = '红球 6 个，如 1 2 3 4 5 6';
-  red.style.width = '260px';
+  red.placeholder = '01 02 03 04 05 06';
+  red.inputMode = 'numeric';
+  red.autocomplete = 'off';
+  red.setAttribute('aria-label', `第${i + 1}组红球号码`);
 
-  const blueLabel = document.createElement('span');
-  blueLabel.textContent = '蓝：';
+  const redField = document.createElement('label');
+  redField.className = 'user-number-field';
+  const redCaption = document.createElement('span');
+  redCaption.className = 'input-caption';
+  redCaption.textContent = '红球号码';
+  redField.append(redCaption, red);
 
   const blue = document.createElement('input');
   blue.type = 'text';
-  blue.placeholder = '蓝球';
-  blue.style.width = '70px';
+  blue.placeholder = '08';
+  blue.inputMode = 'numeric';
+  blue.autocomplete = 'off';
+  blue.setAttribute('aria-label', `第${i + 1}组蓝球号码`);
 
-  row.append(label, red, blueLabel, blue);
+  const blueField = document.createElement('label');
+  blueField.className = 'user-number-field';
+  const blueCaption = document.createElement('span');
+  blueCaption.className = 'input-caption';
+  blueCaption.textContent = '蓝球号码';
+  blueField.append(blueCaption, blue);
+
+  row.append(label, redField, blueField);
   userRows.appendChild(row);
   entriesRed.push(red);
   entriesBlue.push(blue);
