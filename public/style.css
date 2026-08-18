@@ -245,6 +245,7 @@ h1 {
 }
 
 input[type="text"],
+input[type="number"],
 select {
   width: 100%;
   min-width: 0;
@@ -266,6 +267,7 @@ select {
 }
 
 input[type="text"]:focus,
+input[type="number"]:focus,
 select:focus {
   border-color: var(--red-600);
   box-shadow: 0 0 0 3px var(--focus);
@@ -343,6 +345,59 @@ button {
   border-radius: 6px;
   font-weight: 700;
   transition: background 150ms ease, border-color 150ms ease, transform 100ms ease;
+}
+
+.bulk-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  background: var(--red-50);
+  border-color: #f0c7cb;
+}
+
+.bulk-check-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.bulk-check-copy strong {
+  color: var(--ink-900);
+  font-size: 14px;
+}
+
+.bulk-check-copy small {
+  color: var(--ink-500);
+  font-size: 12px;
+}
+
+.bulk-check-controls {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 7px;
+  color: var(--ink-700);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.count-input {
+  width: 66px !important;
+  height: 40px !important;
+  padding: 0 8px !important;
+  text-align: center;
+}
+
+.count-unit {
+  margin-right: 3px;
+  white-space: nowrap;
+}
+
+.bulk-check-controls .btn-secondary {
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -432,6 +487,79 @@ button {
   font-weight: 800;
 }
 
+.batch-result {
+  display: grid;
+  gap: 12px;
+  white-space: normal;
+}
+
+.batch-summary {
+  padding-bottom: 10px;
+  color: var(--ink-700);
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.batch-summary .total {
+  margin-left: 8px;
+}
+
+.draw-result {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.draw-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 12px;
+  padding: 9px 11px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--line);
+}
+
+.draw-heading strong {
+  color: var(--ink-900);
+  font-size: 13px;
+}
+
+.draw-heading span {
+  color: var(--ink-500);
+  font-size: 12px;
+}
+
+.bulk-line {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) minmax(100px, auto);
+  gap: 8px;
+  align-items: center;
+  padding: 7px 11px;
+  border-bottom: 1px solid #edf0f3;
+  color: var(--ink-500);
+  font-size: 12px;
+}
+
+.bulk-line:last-child {
+  border-bottom: 0;
+}
+
+.bulk-line .group-name {
+  color: var(--ink-700);
+  font-weight: 600;
+}
+
+.bulk-line .hit-count {
+  color: var(--ink-500);
+  text-align: right;
+}
+
+.bulk-line .win {
+  text-align: left;
+}
+
 .rule-note {
   display: flex;
   flex-wrap: wrap;
@@ -498,6 +626,15 @@ button {
     padding: 14px 12px 15px;
   }
 
+  .bulk-check {
+    display: grid;
+    gap: 12px;
+  }
+
+  .bulk-check-controls {
+    justify-content: flex-start;
+  }
+
   .number-grid {
     grid-template-columns: minmax(0, 1fr) minmax(96px, 0.34fr);
     gap: 9px;
@@ -509,10 +646,21 @@ button {
   }
 
   input[type="text"],
+  input[type="number"],
   select {
     padding-right: 9px;
     padding-left: 9px;
     font-size: 16px;
+  }
+
+  .bulk-line {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .bulk-line .hit-count {
+    grid-column: 2;
+    margin-top: -5px;
+    text-align: left;
   }
 
   .input-caption {

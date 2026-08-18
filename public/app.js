@@ -34,6 +34,8 @@ const winRed = $('winRed');
 const winBlue = $('winBlue');
 const userRows = $('userRows');
 const resultBox = $('result');
+const recentCount = $('recentCount');
+const btnCheckRecent = $('btnCheckRecent');
 
 let drawList = [];
 const entriesRed = [];
@@ -173,6 +175,40 @@ async function saveUserNumbers() {
 }
 
 // -------------------------- 核对 --------------------------
+function getUserNumbers() {
+  const userNumbers = [];
+  for (let i = 0; i < 5; i++) {
+    const r = parseNumInput(entriesRed[i].value);
+    const b = parseNumInput(entriesBlue[i].value);
+    if (r.length !== 6) {
+      alert(`第${i + 1}组红球必须 6 个！`);
+      return null;
+    }
+    if (b.length !== 1) {
+      alert(`第${i + 1}组蓝球必须 1 个！`);
+      return null;
+    }
+    userNumbers.push([r, b[0]]);
+  }
+  return userNumbers;
+}
+
+function getWinningNumbers(draw) {
+  const red = parseNumInput(draw.red);
+  const blue = parseNumInput(draw.blue);
+  if (red.length !== 6 || blue.length !== 1) return null;
+  return [red, blue[0]];
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function checkAll() {
   saveUserNumbers();
 
@@ -183,14 +219,8 @@ function checkAll() {
   if (wb.length !== 1) return alert('开奖蓝球必须 1 个！');
   const winBlueNum = wb[0];
 
-  const userNumbers = [];
-  for (let i = 0; i < 5; i++) {
-    const r = parseNumInput(entriesRed[i].value);
-    const b = parseNumInput(entriesBlue[i].value);
-    if (r.length !== 6) return alert(`第${i + 1}组红球必须 6 个！`);
-    if (b.length !== 1) return alert(`第${i + 1}组蓝球必须 1 个！`);
-    userNumbers.push([r, b[0]]);
-  }
+  const userNumbers = getUserNumbers();
+  if (!userNumbers) return;
 
   let html = `🔔 开奖号码：红球 [${wr.join(', ')}] ｜ 蓝球 ${winBlueNum}\n\n`;
   let total = 0;
@@ -206,6 +236,57 @@ function checkAll() {
 }
 
 $('btnCheck').addEventListener('click', checkAll);
+
+function checkRecentDraws() {
+  saveUserNumbers();
+
+  const count = Number.parseInt(recentCount.value, 10);
+  if (!Number.isInteger(count) || count < 1 || count > 20) {
+    alert('核对期数请输入 1 到 20 之间的整数！');
+    recentCount.focus();
+    return;
+  }
+
+  if (drawList.length === 0) {
+    alert('暂无可用的开奖数据，请先刷新开奖数据。');
+    return;
+  }
+
+  const userNumbers = getUserNumbers();
+  if (!userNumbers) return;
+
+  const draws = drawList.slice(0, count);
+  let total = 0;
+  let validDraws = 0;
+  const drawHtml = [];
+
+  draws.forEach((draw) => {
+    const winning = getWinningNumbers(draw);
+    if (!winning) return;
+    validDraws += 1;
+    const [winRedNumbers, winBlueNumber] = winning;
+    const lines = userNumbers.map(([red, blue], idx) => {
+      const [prize, money] = checkWin(red, blue, winRedNumbers, winBlueNumber);
+      const redHit = red.filter((number) => winRedNumbers.includes(number)).length;
+      const blueHit = blue === winBlueNumber ? 1 : 0;
+      total += money;
+      const cls = money > 0 ? 'win' : 'lose';
+      return `<div class="bulk-line"><span class="group-name">第${idx + 1}组</span><span class="${cls}">${prize}（+${money}元）</span><span class="hit-count">${redHit}红${blueHit ? ' + 1蓝' : ''}</span></div>`;
+    }).join('');
+
+    drawHtml.push(`<article class="draw-result"><div class="draw-heading"><strong>${escapeHtml(draw.label || '开奖')}</strong><span>红 [${winRedNumbers.join(', ')}] · 蓝 ${winBlueNumber}</span></div>${lines}</article>`);
+  });
+
+  if (validDraws === 0) {
+    resultBox.innerHTML = '<p class="result-empty">选中的开奖数据无效，请刷新后重试</p>';
+    return;
+  }
+
+  const loadedNote = validDraws < count ? `（实际加载 ${validDraws} 期）` : '';
+  resultBox.innerHTML = `<div class="batch-result"><div class="batch-summary">近 ${validDraws} 期核对结果 ${loadedNote}<span class="total">总奖金：${total} 元</span></div>${drawHtml.join('')}</div>`;
+}
+
+btnCheckRecent.addEventListener('click', checkRecentDraws);
 
 // -------------------------- 初始化 --------------------------
 toggleCustom();

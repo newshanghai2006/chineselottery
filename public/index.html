@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#c81e2b" />
   <meta name="description" content="福彩双色球号码核对工具" />
   <title>福彩双色球号码核对器</title>
-  <link rel="icon" href="/favicon.svg?v=20260807-1" type="image/svg+xml" />
-  <link rel="stylesheet" href="/style.css?v=20260807-1" />
+  <link rel="icon" href="/favicon.svg?v=20260818-1" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css?v=20260818-1" />
 </head>
 <body>
   <main class="app-shell">
@@ -64,9 +64,25 @@
       <div id="userRows" class="user-rows"></div>
     </fieldset>
 
+    <section class="bulk-check panel" aria-label="近期开奖批量核对">
+      <div class="bulk-check-copy">
+        <strong>近期开奖批量核对</strong>
+        <small>使用已加载的官方开奖数据，一次核对多期</small>
+      </div>
+      <div class="bulk-check-controls">
+        <label class="count-label" for="recentCount">核对近</label>
+        <input id="recentCount" class="count-input" type="number" min="1" max="20" value="10" inputmode="numeric" />
+        <span class="count-unit">期</span>
+        <button id="btnCheckRecent" class="btn-secondary" type="button">
+          <span aria-hidden="true">▦</span>
+          <span>开始核对</span>
+        </button>
+      </div>
+    </section>
+
     <button id="btnCheck" class="btn-primary" type="button">
       <span aria-hidden="true">✓</span>
-      <span>提交核对</span>
+      <span>核对当前期</span>
     </button>
 
     <fieldset class="panel result-panel">
@@ -88,6 +104,6 @@
     </footer>
   </main>
 
-  <script src="/app.js?v=20260807-1"></script>
+  <script src="/app.js?v=20260818-1"></script>
 </body>
 </html>
